@@ -125,7 +125,7 @@ window.addEventListener('online', () => { syncBest(); loadLeaderboard(); });
 $('account-open').addEventListener('click', () => { syncBest(); loadLeaderboard(); });
 async function initialize() {
   try {
-    const {firebaseConfig} = await import('./firebase-config.js?v=6');
+    const {firebaseConfig} = await import('./firebase-config.js?v=7');
     if (!firebaseConfig.apiKey || !firebaseConfig.projectId || !firebaseConfig.authDomain || !firebaseConfig.appId) {
       $('account-state').textContent = 'Online accounts are coming soon. You can play now; your best score is saved on this device.';
       return;

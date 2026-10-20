@@ -35,4 +35,4 @@ Build 4 caps normal gameplay at 45 simulation steps per second, 25% slower than 
 
 ## Accounts and public leaderboard
 
-See FIREBASE_SETUP.md to enable Google/email authentication and cross-device best scores. Until a Firebase project is configured, online sign-in stays disabled and the game still saves a local device best.
+Google/email authentication and cross-device best scores use Firebase project my-application-454df. See FIREBASE_SETUP.md for maintenance and verification. The game also saves a local device best for guests and offline play.

@@ -1,0 +1,8 @@
+firebase-debug.log*
+firestore-debug.log*
+.firebase/
+node_modules/
+*service-account*.json
+*serviceAccount*.json
+client_secret*.json
+google-services.json

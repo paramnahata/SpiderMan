@@ -1,6 +1,6 @@
 # Enable live accounts and leaderboard
 
-The UI and integration are ready, but accounts cannot work until a Firebase project is connected. No backend credentials are included.
+Connected project: `my-application-454df`; registered web app: `spiderman` (`1:859309042144:web:257567be86b056ec94a385`). Public browser configuration is in firebase-config.js. Google and email/password providers are enabled, and paramnahata.github.io is authorized for sign-in. The existing default Firestore database uses Standard edition in nam5. No private credentials are included. The steps below are for future setup or maintenance.
 
 1. Open https://console.firebase.google.com/ and create/select your project. Analytics is optional.
 2. Add a Web app under Project settings > Your apps. Copy its public firebaseConfig fields into firebase-config.js. Do not share service-account JSON files or private keys.
@@ -22,4 +22,8 @@ The Firestore default single-field descending index supports this top-20 query. 
 
 ## Checks performed
 
-Run `node tests/accounts.test.cjs` for score merge, per-account pending storage, guest isolation and retry behaviour. JavaScript syntax and local browser guest/account-panel checks passed. Live provider sign-in, real cross-device reads/writes, and Firestore rule emulator checks still require a configured Firebase project.
+Run `node tests/accounts.test.cjs` for score merge, per-account pending storage, guest isolation and retry behaviour. JavaScript syntax and local browser guest/account-panel checks passed. Live provider sign-in, real two-device reads/writes, and Firestore rule emulator checks remain manual checks. Rules compile successfully against the real Firebase project with a deployment dry run.
+
+## Rules review
+
+Public reads are intentionally restricted to score documents; list queries require a limit of at most 20. Other collections and subcollections are denied. Ownership is bound to the authenticated UID in the path. Create and update both validate all required/allowed fields, integer score bounds, deterministic alias and length, and server timestamp. Updates must increase the best and keep the alias. Deletes are denied. Extra email/role/owner/path fields, missing fields, oversized strings, invalid types, forged timestamps, negative scores, cross-user writes, lower scores and unbounded list queries are denied by these conditions. Client-submitted high scores are still forgeable; this is a casual leaderboard, not server-validated anti-cheat. These prototype rules need review before broad release.

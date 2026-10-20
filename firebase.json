@@ -1,5 +1,20 @@
 {
   "firestore": {
     "rules": "firestore.rules"
+  },
+  "auth": {
+    "providers": {
+      "emailPassword": true,
+      "googleSignIn": {
+        "oAuthBrandDisplayName": "Spider-Man Game",
+        "supportEmail": "nahataparam10@gmail.com",
+        "authorizedRedirectUris": [
+          "https://my-application-454df.firebaseapp.com/__/auth/handler",
+          "https://my-application-454df.web.app",
+          "https://paramnahata.github.io",
+          "http://localhost"
+        ]
+      }
+    }
   }
 }
