@@ -1,106 +1,29 @@
-<!DOCTYPE html>
+<!doctype html>
 <html lang="en">
 <head>
-	<meta charset="UTF-8">
-	<meta name="description"
-                content="A Simple Spiderman Game in HTML5, CSS3 and Javascript" />
-        <meta name="author" content="Chandula Janith (RedEdge967)" />
-	<title>Spider-Man Game | A spiderman game to fight with more Villains of Spider-Man</title>
-	<link rel="shortcut icon" href="images/spider-head.png" />
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
+<meta name="theme-color" content="#b51226">
+<meta name="description" content="Play Spider-Man with keyboard or touch, online or offline.">
+<meta name="apple-mobile-web-app-capable" content="yes">
+<title>Spider-Man Game</title>
+<link rel="icon" href="images/spider-head.png">
+<link rel="apple-touch-icon" href="icons/icon-192.png">
+<link rel="manifest" href="manifest.webmanifest">
+<link rel="stylesheet" href="css/mobile.css?v=4">
 </head>
-<style type="text/css">
-	html,
-	body {
-		height: 100%;
-		width: 100%;
-		margin: 0;
-		font-size: 0;
-		background: #000;
-	}
-
-	.canvas-wrapper {
-		float: left;
-		position: absolute;
-		top: 50%;
-		left: 50%;
-
-		-webkit-transform: translate(-50%, -50%);
-		-moz-transform: translate(-50%, -50%);
-		-ms-transform: translate(-50%, -50%);
-		-o-transform: translate(-50%, -50%);
-		transform: translate(-50%, -50%);
-	}
-
-	.key {
-	    height: 30px;
-	    min-width: 20px;
-	    line-height: 30px;
-	    text-align: center;
-	    border: 1px solid #ccc;
-	    border-bottom: 3px solid #bbb;
-	    background: white;
-	    display: inline-block;
-	    padding: 0 5px;
-	    border-radius: 5px;
-	    box-shadow: inset 0 -1px 0 #ccc;
-	    color: #333;
-	    font-weight: bold;
-	}
-
-	.key.spacebar {
-		padding: 0 40px;
-	}
-
-	.keyboard {
-		margin: 5px 0;
-		font-size: 15px;
-	    font-family: Helvetica;
-	    color: white;
-	}
-
-	.action {
-		margin-right: 15px;
-	}
-
-	.link {
-		width: 100%;
-		text-align: center;
-		font-size: 20px;
-		color: #ccc;
-		font-family: SpidermanGamePixelFont, Helvetica, Arial;
-		margin-top: 20px;
-	}
-</style>
 <body>
-		<div class="canvas-wrapper">
-		<div class="keyboard">
-			<div class="key spacebar">Spacebar</div>
-			<span class="action">- Shoot</span>
-
-			<div class="key">←</div>
-			<div class="key">→</div>
-			<span class="action">- Left/Right</span>
-
-			<div class="key">↑</div>
-			<span class="action">- Jump</span>
-
-			<div class="key">Esc</div>
-			<span class="action">- Pause</span>
-		</div>
-		<canvas id="canvas"></canvas>
-		<div class="link">
-			Param's creation 
-			<a href="" target="_blank"></a>
-		</div>
-	</div>
-</body>
-<script type="text/javascript" src="spiderman-game.js"></script>
-<script type="text/javascript">
-
-var game = new SpidermanGame({
-	canvas: "#canvas"
-});
-game.load();
-
-</script>
-</html>
+<main class="canvas-wrapper">
+<header><strong>SPIDER-MAN</strong><div><button id="install" hidden>Install</button><button id="pause" disabled>Pause</button></div></header>
+<div class="stage"><canvas id="canvas" aria-label="Spider-Man rooftop game"></canvas></div>
+<p class="keyboard">Arrow keys: move and jump / Space: shoot / Esc: pause</p>
+<div class="touch-controls" aria-label="Game controls">
+<div class="shoot-group"><button data-key="32" class="shoot" aria-label="Hold to shoot webs">Shoot</button></div>
+<div class="joystick-group"><div id="joystick" role="group" aria-label="Press and slide to run or jump"><span class="pad-cross" aria-hidden="true"></span><span class="pad-up" aria-hidden="true">&#9650;</span><span class="pad-left" aria-hidden="true">&#9664;</span><span class="pad-right" aria-hidden="true">&#9654;</span><span class="pad-down" aria-hidden="true">&#9660;</span><span id="joystick-knob" aria-hidden="true"></span></div><span class="control-hint">Slide to run / Up to jump</span></div>
+</div>
+<p id="status" role="status">Loading game...</p>
+<footer>Param's creation / iPhone: Share &gt; Add to Home Screen</footer>
+</main>
+<script src="spiderman-game.js?v=4"></script>
+<script src="app.js?v=4"></script>
+</body></html>

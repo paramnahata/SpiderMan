@@ -137,10 +137,10 @@ SpidermanGame.prototype.load = function() {
 	menu.innerHTML = 
 	'<div class="spiderman-game-menu-container">' +
 		'<div class="spiderman-game-menu-title">PAUSED</div>' +
-		'<div class="spiderman-game-menu-button spiderman-game-menu-button-resume">RESUME</div>' +
-		'<div class="spiderman-game-menu-button spiderman-game-menu-button-mute-sounds">MUTE SOUNDS</div>' +
-		'<div class="spiderman-game-menu-button spiderman-game-menu-button-mute-music">MUTE MUSIC</div>' +
-		'<div class="spiderman-game-menu-button spiderman-game-menu-button-mute-slowmotion">TOGGLE SLOWMOTION</div>' +
+		'<button type=\"button\" class=\"spiderman-game-menu-button spiderman-game-menu-button-resume\">RESUME</button>' +
+		'<button type=\"button\" class=\"spiderman-game-menu-button spiderman-game-menu-button-mute-sounds\">MUTE SOUNDS</button>' +
+		'<button type=\"button\" class=\"spiderman-game-menu-button spiderman-game-menu-button-mute-music\">MUTE MUSIC</button>' +
+		'<button type=\"button\" class=\"spiderman-game-menu-button spiderman-game-menu-button-mute-slowmotion\">TOGGLE SLOWMOTION</button>' +
 	'</div>';
 	menu = menu.firstChild;
 	menu.style.display = "none";
@@ -183,7 +183,7 @@ SpidermanGame.prototype.load = function() {
 	'<div class="spiderman-game-menu-container">' +
 		'<div class="spiderman-game-menu-title">GAME OVER</div>' +
 		'<div class="spiderman-game-menu-title">FINAL SCORE: <span class="spiderman-game-score">0</span></div>' +
-		'<div class="spiderman-game-menu-button spiderman-game-menu-button-restart">RESTART</div>' +
+		'<button type=\"button\" class=\"spiderman-game-menu-button spiderman-game-menu-button-restart\">RESTART</button>' +
 	'</div>';
 	gameoverMenu = gameoverMenu.firstChild;
 
@@ -287,6 +287,7 @@ SpidermanGame.prototype.load = function() {
 				self.resources[resource.name] = img;
 				loadNext();
 			}
+			img.onerror = function() { reject(new Error("Could not load " + resource.source)); };
 			img.src = resource.source;
 		}
 
@@ -295,26 +296,12 @@ SpidermanGame.prototype.load = function() {
 }
 
 SpidermanGame.prototype.setSlowmotion = function(slowmo) {
-	if (slowmo) {
-		this.slowmotion = true;
-
-		window.requestAnimFrame = function(callback) {
-			setTimeout(callback, 1000 / 10);
-		}
-
-		for (var audio in AUDIO_RESOURCES) {
-			AUDIO_RESOURCES[audio].playbackRate = 0.5;
-		}
-	} else {
-		this.slowmotion = false;
-
-		window.requestAnimFrame = requestAnimationFrame;
-
-		for (var audio in AUDIO_RESOURCES) {
-			AUDIO_RESOURCES[audio].playbackRate = 1;
-		}
-	}
-}
+    this.slowmotion = !!slowmo;
+    this.lastTick = null;
+    for (var audio in AUDIO_RESOURCES) {
+        AUDIO_RESOURCES[audio].playbackRate = slowmo ? 0.5 : 1;
+    }
+};
 
 SpidermanGame.prototype.mute = function() {
 	this.muted = true;
@@ -341,8 +328,8 @@ SpidermanGame.prototype.showPauseMenu = function() {
 	var top = canvasRect.top;
 
 	this.pauseMenu.style.display = "block";
-	this.pauseMenu.style.left = (left + this.canvas.width / 2) + "px";
-	this.pauseMenu.style.top = (top + this.canvas.height / 2) + "px";
+	this.pauseMenu.style.left = (left + canvasRect.width / 2) + "px";
+	this.pauseMenu.style.top = (top + canvasRect.height / 2) + "px";
 }
 
 SpidermanGame.prototype.showGameoverMenu = function() {
@@ -354,16 +341,20 @@ SpidermanGame.prototype.showGameoverMenu = function() {
 	var top = canvasRect.top;
 
 	this.gameoverMenu.style.display = "block";
-	this.gameoverMenu.style.left = (left + this.canvas.width / 2) + "px";
-	this.gameoverMenu.style.top = (top + this.canvas.height / 2) + "px";
+	this.gameoverMenu.style.left = (left + canvasRect.width / 2) + "px";
+	this.gameoverMenu.style.top = (top + canvasRect.height / 2) + "px";
 }
 
 SpidermanGame.prototype.pause = function() {
+	if (this.gameIsOver) return;
 	this.paused = true;
+	window.cancelAnimationFrame(this.animationId);
+	clearTimeout(this.animationId);
 	this.showPauseMenu();
 };
 
 SpidermanGame.prototype.unpause = function() {
+	if (!this.paused || this.gameIsOver) return;
 	this.paused = false;
 
 	this.pauseMenu.style.display = "none";
@@ -383,7 +374,9 @@ SpidermanGame.prototype.playSound = function(audio, clone, currentTime) {
 			audio.currentTime = currentTime;
 		}
 
-		return audio.play();
+		var playback = audio.play();
+		if (playback && playback.catch) playback.catch(function() {});
+		return playback;
 	}
 };
 
@@ -438,9 +431,23 @@ SpidermanGame.prototype.drawEnemies = function() {
 	}
 }
 
-SpidermanGame.prototype.update = function() {
+SpidermanGame.prototype.update = function(timestamp) {
 	if (this.paused) return;
 	if (this.gameIsOver) return;
+
+    // Cap simulation speed independently of 60/90/120/144 Hz screens.
+    // 45 steps per second is 25% gentler than the original 60 FPS game.
+    var interval = 1000 / (this.slowmotion ? 10 : 45);
+    if (typeof timestamp === 'number') {
+        if (this.lastTick != null && timestamp - this.lastTick < interval - 0.1) {
+            this.animationId = requestAnimFrame(this.update.bind(this));
+            return;
+        }
+        var elapsed = this.lastTick == null ? interval : timestamp - this.lastTick;
+        this.lastTick = timestamp - (elapsed % interval);
+    } else {
+        this.lastTick = null;
+    }
 
 	// draw the scene
 	var scene = this.scene;
@@ -477,7 +484,7 @@ SpidermanGame.prototype.update = function() {
 		}
 	}
 
-	requestAnimFrame(this.update.bind(this));
+	this.animationId = requestAnimFrame(this.update.bind(this));
 }
 
 SpidermanGame.prototype.addProjectile = function(projectile) {
@@ -708,7 +715,7 @@ SpiderMan.prototype.stateImage = function() {
 }
 
 SpiderMan.prototype.keydown = function(keyCode) {
-	this.keydowns.push(keyCode);
+	if (!this.keyIsDown(keyCode)) this.keydowns.push(keyCode);
 }
 
 SpiderMan.prototype.keyup = function(keyCode) {
