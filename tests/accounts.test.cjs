@@ -32,14 +32,21 @@ async function run() {
   await vm.runInContext('syncBest()',context);
   assert.equal(context.writes.length,0,'lower local score must not replace higher cloud best');
   assert.equal(storage.get('spiderman-pending-accountB'),'0');
-  vm.runInContext('record(15)',context);await vm.runInContext('syncBest()',context);
+  context.refreshes=0;
+  element('account-dialog').open=true;
+  vm.runInContext('store.collection=()=>({}); store.orderBy=()=>({}); store.limit=()=>({}); store.query=()=>({}); store.getDocs=async()=>{refreshes++;return {empty:true,forEach(){}}}; record(15)',context);await vm.runInContext('syncBest()',context);
   assert.equal(context.writes[0].bestScore,15);
+  assert.equal(context.refreshes,1,'successful upload must refresh the open leaderboard');
+  const rules = fs.readFileSync('firestore.rules','utf8');
+  const aliasLength = Number(rules.match(/data\.alias\.size\(\) == (\d+)/)[1]);
+  assert.equal(context.writes[0].alias.length, aliasLength, 'generated alias must match the deployed rule length');
+  assert.equal(context.writes[0].alias, 'Spider-accountB');
   assert.equal(Object.hasOwn(context.writes[0],'email'),false);
   vm.runInContext('record(20); navigator.onLine=false;',context);await vm.runInContext('syncBest()',context);
   assert.equal(storage.get('spiderman-pending-accountB'),'20','offline pending score must survive');
   vm.runInContext('navigator.onLine=true; store.runTransaction=async()=>{throw Error("network")}',context);await vm.runInContext('syncBest()',context);
   assert.equal(storage.get('spiderman-pending-accountB'),'20','failed upload must remain retryable');
-  console.log('Passed: local best, guest isolation, account isolation, monotonic cloud merge, public fields, offline queue and failed-sync retry.');
+  console.log('Passed: alias/rule compatibility, leaderboard refresh after upload, local best, guest isolation, account isolation, monotonic cloud merge, public fields, offline queue and failed-sync retry.');
 }
 run().catch(error=>{console.error(error);process.exitCode=1});
 

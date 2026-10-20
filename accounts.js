@@ -53,8 +53,14 @@ async function syncBest() {
       if (score > old) transaction.set(ref, {bestScore: score, alias: 'Spider-' + current.uid.slice(0, 8), updatedAt: store.serverTimestamp()});
     });
     if (read(pendingKey(current.uid)) <= score) write(pendingKey(current.uid), 0);
-    if (user?.uid === current.uid) feedback('Best score synced.');
-  } catch { if (user?.uid === current.uid) feedback('Could not sync yet. Your score is saved here; reconnect or reopen this panel to retry.'); }
+    if (user?.uid === current.uid) {
+      feedback('Best score synced.');
+      if (dialog.open) await loadLeaderboard();
+    }
+  } catch (error) {
+    console.error('Score sync failed:', error.code || 'unknown');
+    if (user?.uid === current.uid) feedback(error.code === 'permission-denied' ? 'Score upload was rejected. Your score is saved here. Reload to get the latest update and retry.' : 'Could not sync yet. Your score is saved here; reconnect or reopen this panel to retry.');
+  }
   finally {
     saving = false;
     if (user?.uid === current.uid && read(pendingKey(current.uid)) > score) syncBest();
@@ -120,12 +126,12 @@ $('password-reset').onclick = () => {
   action(async () => { await sdk.sendPasswordResetEmail(auth, $('login-email').value.trim()); feedback('If an account exists, a reset email will arrive shortly.'); });
 };
 $('logout').onclick = async () => { try { await syncBest(); await sdk.signOut(auth); feedback('Signed out. You can keep playing as a guest.'); } catch { feedback('Sign out failed. Please try again.'); } };
-$('leaderboard-refresh').onclick = () => { syncBest(); loadLeaderboard(); };
+$('leaderboard-refresh').onclick = async () => { await syncBest(); await loadLeaderboard(); };
 window.addEventListener('online', () => { syncBest(); loadLeaderboard(); });
-$('account-open').addEventListener('click', () => { syncBest(); loadLeaderboard(); });
+$('account-open').addEventListener('click', async () => { await syncBest(); await loadLeaderboard(); });
 async function initialize() {
   try {
-    const {firebaseConfig} = await import('./firebase-config.js?v=7');
+    const {firebaseConfig} = await import('./firebase-config.js?v=8');
     if (!firebaseConfig.apiKey || !firebaseConfig.projectId || !firebaseConfig.authDomain || !firebaseConfig.appId) {
       $('account-state').textContent = 'Online accounts are coming soon. You can play now; your best score is saved on this device.';
       return;

@@ -1,4 +1,4 @@
-// scores/{Firebase Auth UID}: public alias (14 chars), bestScore (integer 1..1000000),
+// scores/{Firebase Auth UID}: public alias (15 chars), bestScore (integer 1..1000000),
 // updatedAt (server timestamp). No email or private profile fields are permitted.
 // Public reads are intentional for the user-requested leaderboard. Writes belong
 // to the UID in the document path. All other collections retain default deny.
@@ -13,7 +13,7 @@ service cloud.firestore {
         return data.keys().hasAll(['bestScore', 'alias', 'updatedAt'])
           && data.keys().hasOnly(['bestScore', 'alias', 'updatedAt'])
           && data.bestScore is int && data.bestScore >= 1 && data.bestScore <= 1000000
-          && data.alias is string && data.alias.size() == 14
+          && data.alias is string && data.alias.size() == 15
           && data.alias == 'Spider-' + uid[0:8]
           && data.updatedAt is timestamp && data.updatedAt == request.time;
       }
