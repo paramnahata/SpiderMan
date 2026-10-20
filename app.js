@@ -138,5 +138,5 @@ if ('serviceWorker' in navigator) {
 var originalUnpause = game.unpause;
 game.unpause = function() {
   originalUnpause.apply(game, arguments);
-  if (!game.paused && !game.gameIsOver) statusText.textContent = 'Slide right pad to run or jump. Hold left Shoot button to fire.';
+  if (!game.paused && !game.gameIsOver) statusText.textContent = 'Slide left pad to run or jump. Hold right Shoot button to fire.';
 };

@@ -1,6 +1,6 @@
 # Spider-Man mobile PWA
 
-Touch controls: use the right thumb directional pad to move left/right. Push up to jump vertically, up-right to jump forward, or up-left to jump backward. Hold the left thumb Shoot button to fire while moving or jumping. Release the joystick to stop. Holding up repeats jumps when grounded. Pause opens the game menu. Keyboard controls remain supported.
+Touch controls: use the left thumb directional pad to move left/right. Push up to jump vertically, up-right to jump forward, or up-left to jump backward. Hold the right thumb Shoot button to fire while moving or jumping. Release the joystick to stop. Holding up repeats jumps when grounded. Pause opens the game menu. Keyboard controls remain supported.
 
 ## Run and install
 
@@ -29,6 +29,6 @@ JavaScript syntax checks passed. Local browser preview loaded all game assets, d
 - Health restores 1 heart every 1,200 gameplay frames, up to 5. At 60 frames/second this is about 20 seconds. Shooting repeats every 20 frames, and thugs attack every 100 frames while on screen. These timings depend on frame rate and slow-motion mode.
 - Scrolling follows forward progress; moving left is limited by the current left edge of the camera. There is no web swinging.
 
-Build 3 fixes a startup failure caused by missing joystick markup. The right pad supports continuous press-and-slide movement and diagonal jumps; Shoot is on the left. Offline worker activates updates immediately and checks fresh game code online.
+Build 3 fixes a startup failure caused by missing joystick markup. The left pad supports continuous press-and-slide movement and diagonal jumps; Shoot is on the right. Offline worker activates updates immediately and checks fresh game code online.
 
 Build 4 caps normal gameplay at 45 simulation steps per second, 25% slower than the original 60 FPS baseline, independent of display refresh rate. Health restoration now takes roughly 27 seconds, held shooting repeats roughly every 0.44 seconds, and enemy attacks repeat roughly every 2.22 seconds. Slow motion remains 10 steps per second.
