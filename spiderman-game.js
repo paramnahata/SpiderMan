@@ -444,7 +444,7 @@ SpidermanGame.prototype.update = function(timestamp) {
             return;
         }
         var elapsed = this.lastTick == null ? interval : timestamp - this.lastTick;
-        this.lastTick = timestamp - (elapsed % interval);
+        this.lastTick = this.lastTick == null ? timestamp : this.lastTick + Math.max(1, Math.floor((elapsed + 0.1) / interval)) * interval;
     } else {
         this.lastTick = null;
     }
