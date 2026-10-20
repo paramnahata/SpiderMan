@@ -32,3 +32,7 @@ JavaScript syntax checks passed. Local browser preview loaded all game assets, d
 Build 3 fixes a startup failure caused by missing joystick markup. The left pad supports continuous press-and-slide movement and diagonal jumps; Shoot is on the right. Offline worker activates updates immediately and checks fresh game code online.
 
 Build 4 caps normal gameplay at 45 simulation steps per second, 25% slower than the original 60 FPS baseline, independent of display refresh rate. Health restoration now takes roughly 27 seconds, held shooting repeats roughly every 0.44 seconds, and enemy attacks repeat roughly every 2.22 seconds. Slow motion remains 10 steps per second.
+
+## Accounts and public leaderboard
+
+See FIREBASE_SETUP.md to enable Google/email authentication and cross-device best scores. Until a Firebase project is configured, online sign-in stays disabled and the game still saves a local device best.

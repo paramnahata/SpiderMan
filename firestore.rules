@@ -1,0 +1,20 @@
+rules_version = '2';
+service cloud.firestore {
+  match /databases/{database}/documents {
+    match /scores/{uid} {
+      allow get: if true;
+      allow list: if request.query.limit != null && request.query.limit <= 20;
+      function validScore() {
+        return request.auth != null && request.auth.uid == uid
+          && request.resource.data.keys().hasOnly(['bestScore', 'alias', 'updatedAt'])
+          && request.resource.data.bestScore is int
+          && request.resource.data.bestScore >= 1 && request.resource.data.bestScore <= 1000000
+          && request.resource.data.alias == 'Spider-' + uid[0:8]
+          && request.resource.data.updatedAt == request.time;
+      }
+      allow create: if validScore();
+      allow update: if validScore() && request.resource.data.bestScore > resource.data.bestScore;
+      allow delete: if false;
+    }
+  }
+}

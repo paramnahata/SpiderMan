@@ -10,11 +10,24 @@
 <link rel="icon" href="images/spider-head.png">
 <link rel="apple-touch-icon" href="icons/icon-192.png">
 <link rel="manifest" href="manifest.webmanifest">
-<link rel="stylesheet" href="css/mobile.css?v=5">
+<link rel="stylesheet" href="css/mobile.css?v=6">
 </head>
 <body>
 <main class="canvas-wrapper">
 <header><strong>SPIDER-MAN</strong><div><button id="install" hidden>Install</button><button id="pause" disabled>Pause</button></div></header>
+<div class="player-bar"><span>Best on device: <strong id="device-best">0</strong></span><button id="account-open">Sign in / Leaderboard</button></div>
+<dialog id="account-dialog" aria-labelledby="account-title">
+<div class="account-heading"><h2 id="account-title">Player account</h2><button id="account-close" aria-label="Close account">Close</button></div>
+<p id="account-state" role="status">Checking online features...</p>
+<div id="auth-panel">
+<button id="google-login" disabled>Continue with Google</button>
+<p>or use your email</p>
+<form id="email-form"><label>Email<input id="login-email" type="email" autocomplete="email" required maxlength="254"></label><label>Password<input id="login-password" type="password" autocomplete="current-password" minlength="6" required></label><div class="account-actions"><button id="email-login" type="submit" disabled>Sign in</button><button id="email-register" type="button" disabled>Create account</button><button id="password-reset" type="button" disabled>Reset password</button></div></form>
+</div>
+<div id="signed-panel" hidden><p>Your online best: <strong id="cloud-best">0</strong></p><button id="logout">Sign out</button></div>
+<p id="account-feedback" role="status"></p>
+<h3>Public leaderboard</h3><p class="privacy-note">Only your generated player alias and best score are public. Your email stays private.</p><p id="leaderboard-state">Online leaderboard is not connected yet.</p><ol id="leaderboard"></ol><button id="leaderboard-refresh" disabled>Refresh leaderboard</button>
+</dialog>
 <div class="stage"><canvas id="canvas" aria-label="Spider-Man rooftop game"></canvas></div>
 <p class="keyboard">Arrow keys: move and jump / Space: shoot / Esc: pause</p>
 <div class="touch-controls" aria-label="Game controls">
@@ -24,6 +37,7 @@
 <p id="status" role="status">Loading game...</p>
 <footer>Param's creation / iPhone: Share &gt; Add to Home Screen</footer>
 </main>
-<script src="spiderman-game.js?v=5"></script>
-<script src="app.js?v=5"></script>
+<script src="spiderman-game.js?v=6"></script>
+<script src="app.js?v=6"></script>
+<script type="module" src="accounts.js?v=6"></script>
 </body></html>
