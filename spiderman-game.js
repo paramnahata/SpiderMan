@@ -36,7 +36,10 @@ var RESOURCES = {
 	"SLIDE"              : "images/slide.png",
 	"STANDING"           : "images/standing.png",
 	"WEB_PROJECTILE"     : "images/web.png",
-	"BACKGROUND"         : "images/background.jpg",
+	"GOBLIN"             : "images/goblin.png",
+	"MYSTERIO"           : "images/mysterio.png",
+	"SANDMAN"            : "images/sandman.png",
+	"DOC_OCK"            : "images/doctor-octopus.png",
 	"ROOF"               : "images/wall.jpg",
 	"BUILDING"           : "images/building.png",
 	"SPIDER_HEAD"        : "images/spider-head.png",
@@ -79,6 +82,12 @@ var DIRECTION = {
 	LEFT: -1,
 }
 
+var MODES = {
+	easy: {steps: 45, villains: ["THUG"]},
+	medium: {steps: 56, villains: ["THUG", "SANDMAN", "MYSTERIO", "GOBLIN"]},
+	hard: {steps: 48, villains: ["THUG", "SANDMAN", "MYSTERIO", "GOBLIN", "VENOM", "DOC_OCK"]}
+};
+
 function SpidermanGame(opts) {
 	var options = {
 		canvas: "canvas",
@@ -102,6 +111,8 @@ function SpidermanGame(opts) {
 	this.resources = {};
 
 	this.cameraX = 0;
+	this.mode = "easy";
+	this.continueKeys = 0;
 	this.score = this.score || 0;
 
 	this.scene = {
@@ -132,11 +143,14 @@ SpidermanGame.prototype.load = function() {
 	this.ctx = this.canvas.getContext("2d");
 	this.canvas.height = 400;
 	this.canvas.width = 711;
+	this.resizeCanvas();
 
 	var menu = document.createElement("div");
 	menu.innerHTML = 
 	'<div class="spiderman-game-menu-container">' +
 		'<div class="spiderman-game-menu-title">PAUSED</div>' +
+		'<label class="difficulty-picker">New run difficulty <select><option value="easy">Easy</option><option value="medium">Medium</option><option value="hard">Hard</option></select></label>' +
+		'<button type="button" class="spiderman-game-menu-button new-run">START NEW RUN</button>' +
 		'<button type=\"button\" class=\"spiderman-game-menu-button spiderman-game-menu-button-resume\">RESUME</button>' +
 		'<button type=\"button\" class=\"spiderman-game-menu-button spiderman-game-menu-button-mute-sounds\">MUTE SOUNDS</button>' +
 		'<button type=\"button\" class=\"spiderman-game-menu-button spiderman-game-menu-button-mute-music\">MUTE MUSIC</button>' +
@@ -146,6 +160,7 @@ SpidermanGame.prototype.load = function() {
 	menu.style.display = "none";
 	menu.querySelector(".spiderman-game-menu-button-resume").onclick = function() {
 		self.unpause();
+		this.blur();
 	}
 
 	menu.querySelector(".spiderman-game-menu-button-mute-sounds").onclick = function() {
@@ -177,11 +192,16 @@ SpidermanGame.prototype.load = function() {
 	}
 	document.body.appendChild(menu);
 	this.pauseMenu = menu;
+	menu.querySelector(".new-run").onclick = function() {
+		self.restart(menu.querySelector("select").value);
+		this.blur();
+	};
 
 	var gameoverMenu = document.createElement("div");
 	gameoverMenu.innerHTML = 
 	'<div class="spiderman-game-menu-container">' +
 		'<div class="spiderman-game-menu-title">GAME OVER</div>' +
+		'<button type="button" class="spiderman-game-menu-button continue-run" hidden>USE KEY AND CONTINUE</button>' +
 		'<div class="spiderman-game-menu-title">FINAL SCORE: <span class="spiderman-game-score">0</span></div>' +
 		'<button type=\"button\" class=\"spiderman-game-menu-button spiderman-game-menu-button-restart\">RESTART</button>' +
 	'</div>';
@@ -192,11 +212,15 @@ SpidermanGame.prototype.load = function() {
 	}
 	document.body.appendChild(gameoverMenu);
 	this.gameoverMenu = gameoverMenu;
+	gameoverMenu.querySelector(".continue-run").onclick = function() {
+		self.continueRun();
+	};
 
 	var spiderman = new SpiderMan(this);
 	this.spiderman = spiderman;
 
 	document.addEventListener("keydown", function(e) {
+		if (e.target.closest && e.target.closest("button, select, input, dialog") && e.keyCode !== KEY.ESC) return;
 		var keyCode = e.keyCode || e.which;
 
 		// fire this on the FIRST keydown callback
@@ -222,6 +246,7 @@ SpidermanGame.prototype.load = function() {
 	});
 
 	window.addEventListener("resize", function() {
+		self.resizeCanvas();
 		// resizing might change the canvas position, re position the menu if it is visible
 		if (self.paused) {
 			self.showPauseMenu();
@@ -271,6 +296,7 @@ SpidermanGame.prototype.load = function() {
 				self.scene.spiderman = spiderman;
 				self.scene.roofs = [roof];
 				self.update();
+				self.loaded = true;
 				self.playSound(AUDIO_LOOP[0], false, 0);
 
 				// if game was muted in initial options
@@ -334,6 +360,7 @@ SpidermanGame.prototype.showPauseMenu = function() {
 
 SpidermanGame.prototype.showGameoverMenu = function() {
 	var gameoverMenu = this.gameoverMenu;
+	gameoverMenu.querySelector(".continue-run").hidden = !this.continueKeys;
 	this.gameoverMenu.querySelector(".spiderman-game-score").innerHTML = this.score;
 
 	var canvasRect = this.canvas.getBoundingClientRect(); // includes CSS translations
@@ -390,41 +417,62 @@ SpidermanGame.prototype.pauseSound = function(audio) {
 	}
 }
 
+SpidermanGame.prototype.resizeCanvas = function() {
+	var stage = this.canvas.parentElement;
+	var width = stage.clientWidth;
+	var height = stage.clientHeight;
+	if (!width || !height) return;
+	var logicalWidth = Math.max(320, Math.round(400 * width / height));
+	if (this.canvas.width === logicalWidth) return;
+	this.canvas.width = logicalWidth;
+	if (this.loaded && (this.paused || this.gameIsOver)) this.drawBackground();
+};
+
 SpidermanGame.prototype.drawBackground = function() {
-	var background = this.resources.BACKGROUND;
-	var backgroundWidth = background.width;
-	var backgroundHeight = background.height;
+	var ctx = this.ctx;
+	var width = this.canvas.width;
+	ctx.imageSmoothingEnabled = false;
+	var sky = ["#0a1027", "#151936", "#262044", "#3b2548", "#563047"];
+	sky.forEach(function(color, i) {
+		ctx.fillStyle = color;
+		ctx.fillRect(0, i * 80, width, 80);
+	});
+	ctx.fillStyle = "#ffcc95";
+	ctx.fillRect(width * 0.77, 44, 40, 40);
+	ctx.fillRect(width * 0.77 - 6, 50, 52, 28);
 
-	var x = this.cameraX / 5 * -1;
-	var y = 0;
-
-	x %= Math.min(background.width, this.canvas.width);
-
-	var ratio = backgroundWidth / backgroundHeight;
-	this.ctx.drawImage(background, x, y, this.canvas.height * ratio, this.canvas.height);
-	this.ctx.drawImage(background, x + this.canvas.height * ratio, y, this.canvas.height * ratio, this.canvas.height);
-}
+	for (var layer = 0; layer < 2; layer++) {
+		var pitch = layer ? 73 : 49;
+		var scroll = Math.floor(this.cameraX * (layer ? 0.36 : 0.15));
+		var first = Math.floor(scroll / pitch);
+		for (var i = first; i <= first + Math.ceil(width / pitch); i++) {
+			var x = i * pitch - scroll;
+			var y = (layer ? 226 : 172) - ((i * 43 + layer * 11) % 67);
+			ctx.fillStyle = layer ? "#0d172c" : "#282744";
+			ctx.fillRect(x, y, pitch - 5, 400 - y);
+			ctx.fillRect(x + 10, y - 9, pitch - 29, 9);
+			for (var row = 0; row < 9; row++) {
+				for (var col = 0; col < (layer ? 5 : 3); col++) {
+					ctx.fillStyle = (i + row * 3 + col * 2) % 7 < 2 ? "#db916b" : "#35425d";
+					ctx.fillRect(x + 8 + col * 11, y + 13 + row * 17, 4, 6);
+				}
+			}
+		}
+	}
+};
 
 SpidermanGame.prototype.drawRoofs = function() {
 	var roofs = this.scene.roofs;
-
-	for (var i = 0; i < roofs.length; i++) {
-		roofs[i].update();
+	var last = roofs[roofs.length - 1];
+	while (roofs.length < 3 || last.x + last.fullWidth < this.cameraX + this.canvas.width) {
+		last = new Roof(this, last.x + last.fullWidth + Math.round(Math.random() * 50) + 100);
+		this.addRoof(last);
 	}
-
-	// if roof left the frame and was removed, add another one
-	if (roofs.length < 3) {
-		var lastRoof = roofs[roofs.length - 1];
-		var x = lastRoof.x + lastRoof.fullWidth + Math.round(Math.random() * 50) + 100;
-
-		var roof = new Roof(this, x);
-		this.addRoof(roof);
-		roofs[0].update();
-	}
-}
+	roofs.slice().forEach(function(roof) { roof.update(); });
+};
 
 SpidermanGame.prototype.drawEnemies = function() {
-	var enemies = this.scene.enemies;
+	var enemies = this.scene.enemies.slice();
 
 	for (var i = 0; i < enemies.length; i++) {
 		enemies[i].update();
@@ -437,7 +485,7 @@ SpidermanGame.prototype.update = function(timestamp) {
 
     // Cap simulation speed independently of 60/90/120/144 Hz screens.
     // 45 steps per second is 25% gentler than the original 60 FPS game.
-    var interval = 1000 / (this.slowmotion ? 10 : 45);
+    var interval = 1000 / (this.slowmotion ? 10 : MODES[this.mode].steps);
     if (typeof timestamp === 'number') {
         if (this.lastTick != null && timestamp - this.lastTick < interval - 0.1) {
             this.animationId = requestAnimFrame(this.update.bind(this));
@@ -471,6 +519,9 @@ SpidermanGame.prototype.update = function(timestamp) {
 	this.ctx.textAlign = "center";
 	this.ctx.textBaseline = "top";
 	this.ctx.fillText(this.score, this.canvas.width / 2, 5);
+	this.ctx.font = "12px SpidermanGamePixelFont, monospace";
+	this.ctx.fillText(this.mode.toUpperCase() + "  /  KEYS " + this.continueKeys, this.canvas.width / 2, 30);
+	if (this.gameIsOver) return;
 
 	for (var i = 0; i < projectiles.length; i++) {
 		var projectile = projectiles[i];
@@ -567,26 +618,41 @@ SpidermanGame.prototype.isCharacterAtPoint = function(x, y) {
 	return false;
 }
 
-SpidermanGame.prototype.restart = function() {
-	var roof = new Roof(this);
-	roof.x = 0;
-
-	this.spiderman = new SpiderMan(this);
-	this.scene.spiderman = this.spiderman;
-	this.scene.projectiles = [];
-	this.scene.roofs = [roof];
-	this.scene.enemies = [];
+SpidermanGame.prototype.restart = function(mode) {
+	window.cancelAnimationFrame(this.animationId);
+	if (Object.hasOwn(MODES, mode)) this.mode = mode;
 	this.cameraX = 0;
 	this.score = 0;
+	this.continueKeys = 0;
+	this.scene.enemies = [];
+	this.scene.projectiles = [];
+	this.scene.roofs = [new Roof(this, 0)];
+	this.spiderman = this.scene.spiderman = new SpiderMan(this);
+	this.resumeRun();
+};
 
+SpidermanGame.prototype.continueRun = function() {
+	if (!this.gameIsOver || !this.continueKeys) return;
+	this.continueKeys--;
+	var roof = this.scene.roofs.find(function(roof) {
+		return roof.x + roof.width > this.cameraX + 100;
+	}, this) || this.scene.roofs[0];
+	this.cameraX = Math.max(this.cameraX, roof.x);
+	var spider = this.spiderman = this.scene.spiderman = new SpiderMan(this);
+	spider.x = this.cameraX + 12;
+	spider.y = roof.y - this.resources.STANDING.height * spider.scale - 1;
+	spider.hazardCooldown = 90;
+	this.scene.projectiles = [];
+	this.resumeRun();
+};
+
+SpidermanGame.prototype.resumeRun = function() {
 	this.paused = false;
 	this.gameIsOver = false;
-
 	this.gameoverMenu.style.display = "none";
 	this.pauseMenu.style.display = "none";
-
 	this.update();
-}
+};
 
 SpidermanGame.prototype.gameover = function() {
 	this.gameIsOver = true;
@@ -853,8 +919,8 @@ SpiderMan.prototype.update = function() {
 		this.addState("SHOOT");
 	}
 
-	if (this.y >= this.canvas.height || !this.health || !this.web) {
-		this.game.gameover();
+	if (this.y >= this.canvas.height || this.health <= 0 || this.web <= 0) {
+		return this.game.gameover();
 	}
 
 	var img = this.stateImage();
@@ -894,6 +960,17 @@ SpiderMan.prototype.update = function() {
 			this.velocityY = 0;
 			this.removeState("FALL");
 		}
+	}
+
+	this.hazardCooldown = Math.max(0, (this.hazardCooldown || 0) - 1);
+	if (!this.hazardCooldown && this.game.scene.roofs.some(function(roof) {
+		return roof.hazardX !== undefined && this.x + img.width * this.scale > roof.hazardX &&
+			this.x < roof.hazardX + 36 && this.y + img.height * this.scale > roof.y - 15 &&
+			this.y < roof.y;
+	}, this)) {
+		this.health--;
+		this.hazardCooldown = 45;
+		this.wasDamagedOnPreviousFrame = true;
 	}
 
 	var x = this.x - this.game.cameraX;
@@ -962,10 +1039,18 @@ function Roof(game, x, y) {
 	this.x = x || 0;
 	this.y = this.canvas.height - this.height;
 
-	// 70% chance?
+	if (game.mode === "hard" && this.x > 0 && Math.random() < 0.65) {
+		this.hazardX = this.x + this.width * 0.68;
+	}
+
+	// Keep the original 70% spawn chance.
 	var shouldSpawnEnemy = Math.round(Math.random() * 100) >= 30;
 	if (shouldSpawnEnemy) {
+		var villains = MODES[game.mode].villains;
+		var name = villains.length === 1 ? villains[0] : villains[Math.floor(Math.random() * villains.length)];
 		var enemy = new Enemy(this.game, {
+			name: name,
+			health: name === "THUG" ? 4 : name === "VENOM" ? 10 : 6,
 			x: this.x + this.width / 2,
 		});
 		enemy.y = this.y - 1 - enemy.stateImg.height * enemy.scale;
@@ -981,7 +1066,17 @@ Roof.prototype.update = function() {
 	this.ctx.drawImage(roof, 0, 0, this.width, this.height, renderX, this.y, this.width, this.height);
 	this.ctx.drawImage(roof, this.width, 0, 15, 26, renderX + this.width, this.y, 15, 26);
 
-	if (renderX + this.width <= 0) {
+	if (this.hazardX !== undefined) {
+		var hazardX = Math.round(this.hazardX - this.game.cameraX);
+		this.ctx.fillStyle = "#ffad55";
+		for (var i = 0; i < 4; i++) {
+			this.ctx.fillRect(hazardX + i * 9, this.y - 6, 8, 6);
+			this.ctx.fillRect(hazardX + i * 9 + 2, this.y - 11, 4, 5);
+			this.ctx.fillRect(hazardX + i * 9 + 3, this.y - 15, 2, 4);
+		}
+	}
+
+	if (renderX + this.fullWidth <= 0) {
 		this.game.removeRoof(this);
 		this.game.removeEnemy(this.enemy);
 	}
@@ -1003,6 +1098,8 @@ function Enemy(game, opts) {
 	// just to control the scaling of an image
 	this.scale = 0.5;
 	this.stateImg = this.game.resources[this.name];
+	if (this.name !== "THUG") this.scale = 60 / this.stateImg.height;
+	this.dropsKey = this.name === "MYSTERIO" || this.name === "VENOM";
 
 	this.wasDamagedOnPreviousFrame = false;
 	this.frame = 0;
@@ -1062,7 +1159,7 @@ Enemy.prototype.update = function() {
 	this.stateImg = img;
 
 	if (this.health <= 0) {
-		this.remove();
+		return this.remove();
 	}
 
 	this.drawHealthbar();
@@ -1077,6 +1174,12 @@ Enemy.prototype.update = function() {
 
 	this.ctx.drawImage(this.game.resources[this.name], (x + width) * -1, y, width, height);
 	this.ctx.restore();
+	if (this.dropsKey) {
+		this.ctx.fillStyle = "#ffd264";
+		this.ctx.font = "10px SpidermanGamePixelFont, monospace";
+		this.ctx.textAlign = "center";
+		this.ctx.fillText("KEY", x + width / 2, y - 30);
+	}
 
 	if (this.wasDamagedOnPreviousFrame) {
 		this.wasDamagedOnPreviousFrame = false;
@@ -1095,6 +1198,7 @@ Enemy.prototype.update = function() {
 
 Enemy.prototype.remove = function() {
 	this.game.score++;
+	if (this.dropsKey) this.game.continueKeys++;
 	this.game.spiderman.web += this.maxHealth;
 	this.game.removeEnemy(this);	
 }

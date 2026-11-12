@@ -79,13 +79,14 @@ document.querySelectorAll('[data-key]').forEach(function(button) {
   button.addEventListener('contextmenu', function(event) { event.preventDefault(); });
 });
 document.addEventListener('keydown', function(event) {
+  if (event.target.closest('button, select, input, dialog')) return;
   if ([37,38,39,32,27].includes(event.keyCode)) { event.preventDefault(); keyboard.add(event.keyCode); }
 });
 document.addEventListener('keyup', function(event) {
   keyboard.delete(event.keyCode);
   if (touchHasKey(event.keyCode)) game.spiderman.keydown(event.keyCode);
 });
-['pause', 'gameover', 'restart'].forEach(function(name) {
+['pause', 'gameover', 'restart', 'continueRun'].forEach(function(name) {
   var original = game[name];
   game[name] = function() { releaseAll(); return original.apply(game, arguments); };
 });
