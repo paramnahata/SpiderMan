@@ -220,32 +220,6 @@ SpidermanGame.prototype.load = function() {
 	var spiderman = new SpiderMan(this);
 	this.spiderman = spiderman;
 
-	document.addEventListener("keydown", function(e) {
-		if (e.target.closest && e.target.closest("button, select, input, dialog") && e.keyCode !== KEY.ESC) return;
-		var keyCode = e.keyCode || e.which;
-
-		// fire this on the FIRST keydown callback
-		if (keyCode == KEY.ESC && !self.escapeKey) {
-			self.escapeKey = true;
-			if (self.paused) {
-				self.unpause();
-			} else {
-				self.pause();
-			}
-		}
-
-		self.spiderman.keydown(e.keyCode || e.which);
-	});
-
-	document.addEventListener("keyup", function(e) {
-		var keyCode = e.keyCode || e.which;
-		if (keyCode == KEY.ESC) {
-			self.escapeKey = false;
-		}
-
-		self.spiderman.keyup(keyCode);
-	});
-
 	window.addEventListener("resize", function() {
 		self.resizeCanvas();
 		// resizing might change the canvas position, re position the menu if it is visible
@@ -607,9 +581,12 @@ SpidermanGame.prototype.isCharacterAtPoint = function(x, y) {
 
 		var left = character.x - this.cameraX;
 		var top = character.y;
+		if (character === this.spiderman && character.grounded && character.keyIsDown(KEY.ARROW_DOWN)) {
+			top += this.resources.STANDING.height * character.scale * 0.35;
+		}
 		var hitbox = character === this.spiderman ? this.resources.STANDING : stateImg;
 		var right = left + hitbox.width * character.scale;
-		var bottom = top + hitbox.height * character.scale;
+		var bottom = character.y + hitbox.height * character.scale;
 
 		var isCharacter = 
 			   left   <= x // check left bound
@@ -776,6 +753,8 @@ SpiderMan.prototype.stateImage = function() {
 		this.shootingFrame++;
 	}
 
+	if (this.grounded && this.keyIsDown(KEY.ARROW_DOWN)) state = "SLIDE";
+
 	if (!this.grounded && this.velocityY !== 0) {
 		state = this.hasState("SHOOT") ? "SHOOT_JUMP" : "JUMP";
 	}
@@ -915,6 +894,7 @@ SpiderMan.prototype.update = function() {
 		this.velocityY = -this.jumpSpeed;
 		this.grounded = false;
 	}
+	this.removeState("RUNNING");
 	if (this.keyIsDown(KEY.ARROW_RIGHT)) {
 		this.addState("RUNNING");
 		this.runningDirection = DIRECTION.RIGHT;
