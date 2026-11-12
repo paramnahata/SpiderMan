@@ -15,6 +15,11 @@
 .difficulty-picker{display:flex;align-items:center;justify-content:space-between;gap:8px;padding:6px 10px;color:#ffda9b}
 .difficulty-picker select{font:inherit;color:#fff;background:#253550;padding:6px}
 canvas{image-rendering:pixelated}
+.stage{position:relative}
+#run-hud{position:absolute;z-index:1;top:clamp(27px,4vw,44px);left:50%;transform:translateX(-50%);display:flex;gap:4px;padding:4px;background:#080e20ed;border:1px solid #394766;border-radius:9px;line-height:1.15;white-space:nowrap;pointer-events:none}
+#run-hud span{padding:4px clamp(6px,1.4vw,14px);color:#c0cce2;font-size:10px;text-align:center}
+#run-hud strong{display:block;color:#fff;font-size:14px;margin-top:2px}
+#run-hud span:nth-child(n+3) strong{color:#ffd264}
 @media (min-width: 800px) and (pointer: fine){
   body{display:block;padding:0}
   .canvas-wrapper{width:100%;max-width:none}
@@ -41,7 +46,7 @@ canvas{image-rendering:pixelated}
 <p id="account-feedback" role="status"></p>
 <h3>Public leaderboard</h3><p class="privacy-note">Only your generated player alias and best score are public. Your email stays private.</p><p id="leaderboard-state">Online leaderboard is not connected yet.</p><ol id="leaderboard"></ol><button id="leaderboard-refresh" disabled>Refresh leaderboard</button>
 </dialog>
-<div class="stage"><canvas id="canvas" aria-label="Spider-Man rooftop game"></canvas></div>
+<div class="stage"><div id="run-hud" aria-label="Run stats"><span>MODE<strong>EASY</strong></span><span>SCORE<strong>0</strong></span><span>KEYS<strong>0</strong></span><span>REVIVE<strong>Locked</strong></span></div><canvas id="canvas" aria-label="Spider-Man rooftop game"></canvas></div>
 <p class="keyboard">Arrow keys: move and jump / Space: shoot / Esc: pause</p>
 <div class="touch-controls" aria-label="Game controls">
 <div class="joystick-group"><div id="joystick" role="group" aria-label="Press and slide to run or jump"><span class="pad-cross" aria-hidden="true"></span><span class="pad-up" aria-hidden="true">&#9650;</span><span class="pad-left" aria-hidden="true">&#9664;</span><span class="pad-right" aria-hidden="true">&#9654;</span><span class="pad-down" aria-hidden="true">&#9660;</span><span id="joystick-knob" aria-hidden="true"></span></div><span class="control-hint">Slide to run / Up to jump</span></div>
@@ -50,7 +55,7 @@ canvas{image-rendering:pixelated}
 <p id="status" role="status">Loading game...</p>
 <footer>Param's creation / iPhone: Share &gt; Add to Home Screen</footer>
 </main>
-<script src="spiderman-game.js?v=9"></script>
-<script src="app.js?v=9"></script>
+<script src="spiderman-game.js?v=10"></script>
+<script src="app.js?v=10"></script>
 <script type="module" src="accounts.js?v=8"></script>
 </body></html>

@@ -141,6 +141,7 @@ SpidermanGame.prototype.load = function() {
 		document.body.appendChild(this.canvas);
 	}
 	this.ctx = this.canvas.getContext("2d");
+	this.runHud = document.querySelector("#run-hud");
 	this.canvas.height = 400;
 	this.canvas.width = 711;
 	this.resizeCanvas();
@@ -360,7 +361,9 @@ SpidermanGame.prototype.showPauseMenu = function() {
 
 SpidermanGame.prototype.showGameoverMenu = function() {
 	var gameoverMenu = this.gameoverMenu;
-	gameoverMenu.querySelector(".continue-run").hidden = !this.continueKeys;
+	var revive = gameoverMenu.querySelector(".continue-run");
+	revive.hidden = !this.continueKeys;
+	revive.textContent = "REVIVE · USE 1 KEY (" + this.continueKeys + " LEFT)";
 	this.gameoverMenu.querySelector(".spiderman-game-score").innerHTML = this.score;
 
 	var canvasRect = this.canvas.getBoundingClientRect(); // includes CSS translations
@@ -514,13 +517,14 @@ SpidermanGame.prototype.update = function(timestamp) {
 
 	spiderman.update();
 
-	this.ctx.fillStyle = "white";
-	this.ctx.font = "20px SpidermanGamePixelFont, Monospace, Helvetica";
-	this.ctx.textAlign = "center";
-	this.ctx.textBaseline = "top";
-	this.ctx.fillText(this.score, this.canvas.width / 2, 5);
-	this.ctx.font = "12px SpidermanGamePixelFont, monospace";
-	this.ctx.fillText(this.mode.toUpperCase() + "  /  KEYS " + this.continueKeys, this.canvas.width / 2, 30);
+	if (this.runHud) {
+		var hud = [this.mode.toUpperCase(), this.score, this.continueKeys,
+			this.continueKeys ? "Ready" : "Locked"];
+		for (var i = 0; i < hud.length; i++) {
+			var value = this.runHud.children[i].querySelector("strong");
+			if (value.textContent !== String(hud[i])) value.textContent = hud[i];
+		}
+	}
 	if (this.gameIsOver) return;
 
 	for (var i = 0; i < projectiles.length; i++) {
@@ -603,8 +607,9 @@ SpidermanGame.prototype.isCharacterAtPoint = function(x, y) {
 
 		var left = character.x - this.cameraX;
 		var top = character.y;
-		var right = left + stateImg.width * character.scale;
-		var bottom = top + stateImg.height * character.scale;
+		var hitbox = character === this.spiderman ? this.resources.STANDING : stateImg;
+		var right = left + hitbox.width * character.scale;
+		var bottom = top + hitbox.height * character.scale;
 
 		var isCharacter = 
 			   left   <= x // check left bound
@@ -641,7 +646,7 @@ SpidermanGame.prototype.continueRun = function() {
 	var spider = this.spiderman = this.scene.spiderman = new SpiderMan(this);
 	spider.x = this.cameraX + 12;
 	spider.y = roof.y - this.resources.STANDING.height * spider.scale - 1;
-	spider.hazardCooldown = 90;
+	spider.damageCooldown = 90;
 	this.scene.projectiles = [];
 	this.resumeRun();
 };
@@ -689,6 +694,10 @@ function SpiderMan(game) {
 	this.runningFrame = 0;
 
 	this.gravityForce = 0.7;
+	this.jumpSpeed = 17;
+	this.grounded = false;
+	this.damageCooldown = 0;
+	this.touchingSpikes = false;
 
 	this.runningDirection = 0;
 	this.runningSpeed = 5;
@@ -729,25 +738,18 @@ SpiderMan.prototype.removeState = function(state) {
 }
 
 SpiderMan.prototype.handleHitWithProjectile = function(projectile) {
-	if (projectile.name != "WEB") {
-		this.health -= projectile.damage;
-		this.wasDamagedOnPreviousFrame = true;
-	}
-}
+	if (projectile.name !== "WEB") this.takeDamage(projectile.damage);
+};
 
-// returns the image to draw in position of spiderman
+SpiderMan.prototype.takeDamage = function(amount) {
+	if (this.damageCooldown) return;
+	this.health = Math.max(0, this.health - amount);
+	this.damageCooldown = 45;
+	this.wasDamagedOnPreviousFrame = true;
+};
+
 SpiderMan.prototype.stateImage = function() {
 	var state = "STANDING";
-
-	if (this.hasState("JUMP")) {
-		state = "JUMP";
-
-		if (this.velocityY == 0) {
-			this.velocityY = -15;
-		}
-	}
-
-	if (this.velocityY >= 0) this.removeState("JUMP");
 
 	if (this.hasState("RUNNING")) {
 		state = this.runningFrames[this.runningFrame];
@@ -772,6 +774,10 @@ SpiderMan.prototype.stateImage = function() {
 			this.shoot(this.game.resources.SHOOT);
 		}
 		this.shootingFrame++;
+	}
+
+	if (!this.grounded && this.velocityY !== 0) {
+		state = this.hasState("SHOOT") ? "SHOOT_JUMP" : "JUMP";
 	}
 
 	var image = this.game.resources[state] || this.game.resources["STANDING"];
@@ -805,7 +811,7 @@ SpiderMan.prototype.keyup = function(keyCode) {
 
 SpiderMan.prototype.regenerate = function() {
 	// if this is 300th fps, regenerate
-	if (this.frame % this.regenerationSpeed === 0 && this.health < this.maxHealth) {
+	if (this.frame > 0 && this.frame % this.regenerationSpeed === 0 && this.health < this.maxHealth) {
 		this.health = Math.round(this.health + 1);
 	}
 }
@@ -904,8 +910,10 @@ SpiderMan.prototype.drawWebbar = function() {
 
 // function that gets called with global update function
 SpiderMan.prototype.update = function() {
-	if (this.keyIsDown(KEY.ARROW_UP) && !this.hasState("FALL")) {
-		this.addState("JUMP");
+	this.damageCooldown = Math.max(0, this.damageCooldown - 1);
+	if (this.keyIsDown(KEY.ARROW_UP) && this.grounded) {
+		this.velocityY = -this.jumpSpeed;
+		this.grounded = false;
 	}
 	if (this.keyIsDown(KEY.ARROW_RIGHT)) {
 		this.addState("RUNNING");
@@ -923,60 +931,45 @@ SpiderMan.prototype.update = function() {
 		return this.game.gameover();
 	}
 
-	var img = this.stateImage();
-
+	var standing = this.game.resources.STANDING;
+	var footHeight = standing.height * this.scale;
+	var bodyWidth = standing.width * this.scale;
+	var previousFoot = this.y + footHeight;
+	this.stateImage();
+	var previousX = this.x;
+	this.x = Math.max(this.game.cameraX, this.x + this.velocityX);
 	this.velocityY += this.gravityForce;
+	var nextFoot = previousFoot + this.velocityY;
+	this.grounded = false;
 
-	this.y += this.velocityY;
-	this.x += this.velocityX;
-
-	if (this.x - this.game.cameraX < 0) {
-		this.x = this.game.cameraX; // dont allow going left
-	}
-
-	if (this.x - this.game.cameraX > 150) {
-		this.game.cameraX += this.velocityX;
-	}
-	
-	// check if coordinates are on the roof, before increasing it by velocityX, because it might BE inside the building
-	// after velocityX
-	// check if left side is on the roof
-	var roofLeft = this.game.isRoofAtPoint(this.x - this.velocityX, this.y + img.height * this.scale + 1);
-	// check if right X hit the roof
-	var roofRight = this.game.isRoofAtPoint(this.x + img.width * this.scale - this.velocityX, this.y + img.height * this.scale + 1);
-
-	// check if spiderman is standing on the ground (roof)
-	if (roofLeft || roofRight) {
-		var roof = roofLeft || roofRight;
-
-		// since velocity might kinda make the spiderman go INSIDE the wall by adding too much Y,
-		// we'll just check if spider's y is INSIDE the wall just because of the velocityY
-		// just to make sure that spider is actually on the roof
-		if (roof.y + this.velocityY <= this.y) {
-			this.x -= this.velocityX;
-			this.velocityX = 0;
-		} else {
-			this.y = this.canvas.height - roof.height - img.height * this.scale;
+	if (this.velocityY >= 0) {
+		var landing = this.game.scene.roofs.find(function(roof) {
+			if (roof.y < previousFoot - 0.001 || roof.y > nextFoot) return false;
+			var fraction = Math.max(0, (roof.y - previousFoot) / this.velocityY);
+			var landingX = previousX + (this.x - previousX) * fraction;
+			return landingX + bodyWidth > roof.x && landingX < roof.x + roof.fullWidth;
+		}, this);
+		if (landing) {
+			nextFoot = landing.y;
 			this.velocityY = 0;
-			this.removeState("FALL");
+			this.grounded = true;
 		}
 	}
+	this.y = nextFoot - footHeight;
+	if (this.x - this.game.cameraX > 150) this.game.cameraX = this.x - 150;
 
-	this.hazardCooldown = Math.max(0, (this.hazardCooldown || 0) - 1);
-	if (!this.hazardCooldown && this.game.scene.roofs.some(function(roof) {
-		return roof.hazardX !== undefined && this.x + img.width * this.scale > roof.hazardX &&
-			this.x < roof.hazardX + 36 && this.y + img.height * this.scale > roof.y - 15 &&
-			this.y < roof.y;
-	}, this)) {
-		this.health--;
-		this.hazardCooldown = 45;
-		this.wasDamagedOnPreviousFrame = true;
-	}
+	var onSpikes = this.game.scene.roofs.some(function(roof) {
+		return roof.hazardX !== undefined && this.x + bodyWidth > roof.hazardX &&
+			this.x < roof.hazardX + 36 && nextFoot > roof.y - 15 && this.y < roof.y;
+	}, this);
+	if (onSpikes && !this.touchingSpikes) this.takeDamage(1);
+	this.touchingSpikes = onSpikes;
 
+	var img = this.stateImg;
 	var x = this.x - this.game.cameraX;
-	var y = this.y;
 	var width = img.width * this.scale;
 	var height = img.height * this.scale;
+	var y = nextFoot - height;
 
 	this.ctx.save();
 
